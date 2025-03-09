@@ -1,66 +1,95 @@
-# Import necessary libraries
+import operator
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.datasets import fetch_california_housing
+from sklearn.linear_model import Ridge, Lasso, ElasticNet
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+
 import matplotlib.pyplot as plt
-import seaborn as sns
 
-# Step 1: Create a synthetic dataset
-# Features: Study Hours, Class Attendance, Assignment Scores
-# Target: Final Exam Score
-np.random.seed(42)  # For reproducibility
-n_samples = 200
-study_hours = np.random.uniform(1, 10, n_samples)
-class_attendance = np.random.uniform(50, 100, n_samples)
-assignment_scores = np.random.uniform(20, 100, n_samples)
+Dataset_size = 10000
+# Load the California housing dataset
+housing = fetch_california_housing()
+housing.data = housing.data[-Dataset_size:]
+housing.target = housing.target[-Dataset_size:]
 
-# Target variable (Final Exam Score)
-# Adding some noise for realism
-exam_scores = (
-    5 * study_hours +
-    0.3 * class_attendance +
-    0.5 * assignment_scores +
-    np.random.normal(0, 5, n_samples)  # Adding noise
-)
+# for x in housing:
+#     print(x)
+#     print(housing[x])
 
-# Create a DataFrame
-data = pd.DataFrame({
-    'Study Hours': study_hours,
-    'Class Attendance': class_attendance,
-    'Assignment Scores': assignment_scores,
-    'Exam Scores': exam_scores
-})
+# Select features and target variable
+X = housing.data[:, [0, 2, 4]]  # Features
+y = housing.target  # Target is the median house value
 
-# Step 2: Split the data into training and testing sets
-X = data[['Study Hours', 'Class Attendance', 'Assignment Scores']]
-y = data['Exam Scores']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
 
-# Step 3: Train the multiple linear regression model
+# Create and train the linear regression model
 model = LinearRegression()
 model.fit(X_train, y_train)
 
-# Step 4: Make predictions
-y_pred = model.predict(X_test)
+# List of possible regression models
 
-# Step 5: Evaluate the model
-# Mean Squared Error (MSE)
-mse = mean_squared_error(y_test, y_pred)
+# Initialize different regression models
+models = {
+    "Linear Regression": LinearRegression(),
+    "Ridge Regression": Ridge(),
+    "Lasso Regression": Lasso(),
+    "ElasticNet Regression": ElasticNet(),
+    "Decision Tree": DecisionTreeRegressor(),
+    "Random Forest": RandomForestRegressor(),
+    "Gradient Boosting": GradientBoostingRegressor(),
+    "Support Vector Regression": SVR(),
+    "K-Neighbors Regression": KNeighborsRegressor()
+}
 
-# R² Score
-r2 = r2_score(y_test, y_pred)
+# Train and evaluate each model
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    print(f"{name} - Mean Squared Error: {mse}, R2 Score: {r2}")
 
-print(f"Mean Squared Error (MSE): {mse:.2f}")
-print(f"R² Score: {r2:.2f}")
+# Visualize the regression line
+    plt.scatter(X_test[:, 0], y_test, color='blue', label='Actual')
+    plt.scatter(X_test[:, 0], y_pred, color='red', label='Predicted')
+    plt.xlabel('Median Income ($100,000)')
+    plt.ylabel('Median House Value ($100,000)')
+    plt.title(f'{name} - California Housing Prices')
 
-# Step 6: Scatter plot of Actual vs Predicted values
-plt.figure(figsize=(8, 6))
-sns.scatterplot(x=y_test, y=y_pred, color='blue', alpha=0.7)
-plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color='red', linestyle='-', linewidth=2)
-plt.title('Actual vs Predicted Exam Scores')
-plt.xlabel('Actual Scores')
-plt.ylabel('Predicted Scores')
-plt.grid(True)
-plt.show()
+    #display mse and r2 in graph itself
+    plt.text(0.1, 0.9, f"MSE: {mse:.2f} ", fontsize=12, transform=plt.gcf().transFigure)
+    plt.text(0.19, 0.9, f"R2 Score: {r2:.2f}", fontsize=12, transform=plt.gcf().transFigure)
+
+    #  Plot the regression line
+    # Sort the values of x before line plot
+    # sort_axis = operator.itemgetter(0)
+    # sorted_zip = sorted(zip(X_test[:, 0], y_pred), key=sort_axis)
+    # X_test[:, 0], y_pred = zip(*sorted_zip)
+    # plt.plot(X_test[:, 0], y_pred, color='green', label='Regression Line')
+
+    line_x = np.linspace(X_test[:, 0].min(), X_test[:, 0].max(), 100)
+    line_y = model.predict(np.column_stack((line_x, np.full_like(line_x, X_test[:, 1].mean()), np.full_like(line_x, X_test[:, 2].mean()))))
+    plt.plot(line_x, line_y, color='green', label='Regression Line')
+
+
+    plt.legend()
+    plt.show()
+
+
+# :Attribute Information:
+#     0- MedInc        median income in block group
+#     1- HouseAge      median house age in block group
+#     2- AveRooms      average number of rooms per household
+#     3- AveBedrms     average number of bedrooms per household
+#     4- Population    block group population
+#     5- AveOccup      average number of household members
+#     6- Latitude      block group latitude
+#     7- Longitude     block group longitude
